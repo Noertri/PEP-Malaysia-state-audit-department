@@ -3,6 +3,7 @@ import csv
 from datetime import datetime
 import httpx
 from bs4 import BeautifulSoup
+import re
 
 
 def main():
@@ -21,9 +22,15 @@ def main():
         souped2 = BeautifulSoup(r1.content, "html.parser")
         tables = souped2.select("div.staff-list.mb-4 .table-responsive table")
         first_row = [col.get_text(strip=True, separator=" ") for col in tables[0].select("tbody tr")[0].select("td")]
+        pattern = re.compile(r"pengarah|pengarah audit negeri|timbalan|timbalan pengarah|timbalan pengarah audit negeri", re.IGNORECASE)
+
+        if pattern.match(first_row[1]):
+            results.append(first_row)
+
         second_row = [col.get_text(strip=True, separator=" ") for col in tables[1].select("tbody tr")[0].select("td")]
-        results.append(first_row)
-        results.append(second_row)
+        
+        if pattern.match(second_row[1]):
+            results.append(second_row)
 
     file_name = "audit_gov_{0}.csv".format(datetime.now().strftime("%d%m%Y%H%M%S"))
     print(f"Save to {file_name}...")
