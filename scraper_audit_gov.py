@@ -14,27 +14,28 @@ def main():
     souped = BeautifulSoup(r.content, "html.parser")
     rows = souped.select("div.form-group div.row.mt-4")
 
-    page_links = [tag.get("href", "") for tag in rows[-1].select("h5>a")]
+    page_links = [(tag.get("href", ""), tag.get_text(strip=True, separator=" ")) for tag in rows[-1].select("h5>a")]
     
     results = list()
-    for link in page_links:
-        r1 = client.get(link)
+    for page in page_links:
+        r1 = client.get(page[0])
         souped2 = BeautifulSoup(r1.content, "html.parser")
         tables = souped2.select("div.staff-list.mb-4 .table-responsive table")
-        first_row = [col.get_text(strip=True, separator=" ") for col in tables[0].select("tbody tr")[0].select("td")]
+        
         pattern = re.compile(r"pengarah|pengarah audit negeri|timbalan|timbalan pengarah|timbalan pengarah audit negeri", re.IGNORECASE)
 
-        if pattern.match(first_row[1]):
-            results.append(first_row)
+        for table in tables[:2]:
+            rows = table.select("tr")
+            for row in rows:
+                cols = [col.get_text(strip=True, separator=" ") for col in row.select("td")]
+                if cols and pattern.match(cols[1]):
+                    cols.append(page[1])
+                    results.append(cols)
 
-        second_row = [col.get_text(strip=True, separator=" ") for col in tables[1].select("tbody tr")[0].select("td")]
-        
-        if pattern.match(second_row[1]):
-            results.append(second_row)
 
     file_name = "audit_gov_{0}.csv".format(datetime.now().strftime("%d%m%Y%H%M%S"))
     print(f"Save to {file_name}...")
-    field_names = ("name", "position", "email", "phone_number")
+    field_names = ("name", "position", "email", "phone_number", "state")
     try:
         with open(file_name, "w", encoding="utf-8", newline="") as f:
             writer = csv.writer(f, delimiter=";")
